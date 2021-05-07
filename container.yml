@@ -4,7 +4,7 @@
             name: httpd
             state: present
   - copy:
-     content: "ganesh chaudhari"
+     content: "we are performing task14.2 on containers"
      dest: /var/www/html/index.html
   - name: starting the service
     command: /usr/sbin/httpd    
