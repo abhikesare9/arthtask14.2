@@ -1,0 +1,75 @@
+- hosts: all
+  gather_facts: yes
+  vars:
+    - container: myos
+    - image: myimage
+
+  tasks:
+    - name: "Adding docker repository for docker configuration"
+      yum_repository:
+        file: "docker.repo"
+        baseurl: "https://download.docker.com/linux/centos/7/x86_64/stable"
+        name: docker
+        gpgcheck: no
+        description: "docker repository"
+    
+
+    - name: "docker installation"
+      command: "yum install docker-ce --nobest -y"
+
+
+    - name: "disable the firewall"
+      service: 
+        name: firewalld
+        state: stopped
+
+
+    - name: "starting docker service"
+      service:
+        name: "docker"
+        state: started
+        enabled: yes
+    
+
+    - name: "installing docker sdk"
+      command: "pip3 install docker-py"
+
+
+    - name: "creating folder"
+      file:
+        path: "/webserver"
+        state: directory
+
+    
+    - name: copying dockerfile on managed node
+      copy:
+          src: "Dockerfile"
+          dest: "/webserver/Dockerfile"
+
+
+    - name: creating image from dockerfile with ssh enabling
+      docker_image:
+        name: "{{ image }}"
+        build:
+          path: "/webserver"
+        source: build
+
+
+    - name: checking container is running or not  
+      command: "docker run -itd --name {{container}} -p 8081:22 {{image}}"
+
+    - name: getting container ip
+      command: "docker inspect {{container}}"   
+      register: y 
+
+    - debug:
+        var: y.container.NetworkSettings.IPAddress
+
+    - name: updating inventory
+      blockinfile:
+        dest: /root/ansiblews/inventory.txt
+        block: |
+                [docker]
+                {{y['container']['NetworkSettings']['IPAddress']}} ansible_user=root ansibe_ssh_pass=password ansible_connection=8081
+
+    
